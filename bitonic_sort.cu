@@ -12,21 +12,20 @@ using namespace std;
 int *d_arr, *h_arr;
 
 __global__ void bitonicsort(int *d_arr, int j, int k) {
-    unsigned int idx, ixj;                                    // Χρησιμοποιούμε τα idx and ixj για την ταξινόμιση
+    unsigned int idx, ixj;
     idx = threadIdx.x + blockDim.x * blockIdx.x;
     ixj = idx ^ j;
 
-    // Tα threads με τα μικρότερα idx ταξινομούν το array
     if (ixj > idx) {
-        if ((idx&k) == 0) {                                     // Ταξινόμιση κατά αύξουσα σειρά
-            if (d_arr[idx] > d_arr[ixj]) {                        // Εναλλαγή του idx με το ixj
+        if ((idx&k) == 0) {
+            if (d_arr[idx] > d_arr[ixj]) {
                 int temp = d_arr[idx];
                 d_arr[idx] = d_arr[ixj];
                 d_arr[ixj] = temp;
             }
         }
-        if ((idx&k) != 0) {                                     // Ταξινόμιση κατά φθίνουσα σειρά
-            if (d_arr[idx] < d_arr[ixj]) {                        // Εναλλαγή του idx με το ixj
+        if ((idx&k) != 0) {
+            if (d_arr[idx] < d_arr[ixj]) {
                 int temp = d_arr[idx];
                 d_arr[idx] = d_arr[ixj];
                 d_arr[ixj] = temp;
@@ -35,8 +34,6 @@ __global__ void bitonicsort(int *d_arr, int j, int k) {
     }
 }
 
-
-// Καλεί το kernel, θέτει παραμέτρους, δίνει μνήμη, τυπώνει αποτέλεσμα, ελευθερώνει μνήμη
 void runBitonicsort(int *h_arr, size_t N) {
     dim3 blocks(BLOCKS,1);
     dim3 threads(THREADS,1);
@@ -50,8 +47,8 @@ void runBitonicsort(int *h_arr, size_t N) {
    
     cudaMemcpy(d_arr, h_arr, N, cudaMemcpyHostToDevice);
   
-    for (int k = 2; k <= n; k <<= 1) {                      // Πάμε κάθε φορά το k προς τα αριστερά κατά 1 bit και το αντικαθιστούμε με το νέο k
-        for (int j = k >> 1; j > 0; j--) {                  // Πάμε το k προς τα δεξιά κατά 1 bit κάθε φορά, ενώ μειώνουμε το j
+    for (int k = 2; k <= n; k <<= 1) {                      //Move k to the left by 1 bit, replacing it
+        for (int j = k >> 1; j > 0; j--) {                  //Move k to the right by 1 bit, reducing j
             bitonicsort<<<blocks, threads>>>(d_arr, j, k);
         }
     }
@@ -78,6 +75,5 @@ int main(void) {
         h_arr[i] = rand() % 100;
 
     runBitonicsort(h_arr, N);
-        
     return 0;
 }

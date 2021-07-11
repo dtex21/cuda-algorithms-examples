@@ -6,20 +6,20 @@ using namespace std;
 double *x, *y, *d_x, *d_y;
 const double step = 0.1;
 
-__device__ double f(double x, double y) {                   // Δίνει την διαφορική εξίσωση
+__device__ double f(double x, double y) {                   //Returns the differential equation
     return 3 * x * x + y;
 }
   // 
- // Παιδί
+ // Child
 // 
 
-__global__ void cash_karp(double *x, double *y) {           // Υπολογίζει το αποτέλεσμα για δέκα βήματα. Δηλαδή από X σε X+1 με βήμα 0.1
+__global__ void cash_karp(double *x, double *y) {
     double k1, k2, k3, k4, k5, k6, k5s;
-    // double k4s, err;
+    //double k4s, err;
     int x_max = 0;
     int idx = threadIdx.x;
     
-    while (x_max < 10) {    
+    while (x_max < 10) {                                    //Calculates the first 10 results
         printf("X: %f\tY: %f\n", *x, *y); 
         
         k1 = step * f(x[idx], y[idx]);
@@ -29,10 +29,10 @@ __global__ void cash_karp(double *x, double *y) {           // Υπολογίζ�
         k5 = step * f((x[idx] + step), (y[idx] - 11*k1/54 + 5*k2/2 - 70*k3/27 + 35*k4/27));
         k6 = step * f((x[idx] + 7*step/8), (y[idx] + 1631*k1/55296 + 175*k2/512 + 575*k3/13824 + 44275*k4/110592 + 253*k5/4096));
         
-        // Τα παρακάτω χρειάζονται για τον υπολογισμό του σφάλματος. Θα υποθέσω ότι το σφάλμα δεν επηρεάζει την διαδικασία
-        // k4s = 37*k1/378 + 250*k3/621 + 125*k4/594 + 512*k6/1771;
+        //The following is needed to calculate the error. I ignore it, so err = 0.
+        //k4s = 37*k1/378 + 250*k3/621 + 125*k4/594 + 512*k6/1771;
         k5s = 2825*k1/27648 + 18575*k3/48384 + 13525*k4/55296 + 277*k5/14336 + k6/4;
-        // err = max(fabs(k4s-k5s));        
+        //err = max(fabs(k4s-k5s));        
         
         y[idx] += k5s;
         x[idx] += step;
@@ -40,44 +40,44 @@ __global__ void cash_karp(double *x, double *y) {           // Υπολογίζ�
     }
 }
   // 
- // Γονέας
+ // Parent
 // 
 
-__global__ void parent_cash_karp(double *x, double *y) {    // Το παιδί καλείται στο γονέα. Όταν τελειώσουν τα παιδιά, τερματίζει και ο γονέας
+__global__ void parent_cash_karp(double *x, double *y) {
     int i = 0;
     
     printf("!---- Start of Process ----!\n");
         
-    while (i < 2) {                                         // Ο αριθμός των παιδιών βασίζεται στο i. Στην περίπτωση μας έχουμε μόνο 2
+    while (i < 2) {                                         //Number of children is 2
         cash_karp <<< 1, 1 >>>(x, y);
         i++;
         cudaDeviceSynchronize();
     }
     
-    printf("!----- End of Process -----!\n");               // Τερματισμός γονέα. Τυπωνει και ένα μήνυμα
+    printf("!----- End of Process -----!\n");
 }
 
 int main() {
     size_t N = sizeof(double);
 
-    // Δίνουμε μνήμα για την GPU
     cudaMalloc((void **) &d_x, N);
     cudaMalloc((void **) &d_y, N);
-    // Αντίστοιχα για τον CPU
     x = (double *)malloc(N);
     y = (double *)malloc(N);
-    // Αντιγράφουμε τις τιμές στην συσκευή
+
     cudaMemcpy(d_x, x, N, cudaMemcpyHostToDevice);
     cudaMemcpy(d_y, y, N, cudaMemcpyHostToDevice);
-    // Καλούμε το kernel
+
     parent_cash_karp <<< 1, 1 >>>(d_x, d_y);
-    // Αντιγράφουμε τις τιμές στον host
+
     cudaMemcpy(x, d_x, N, cudaMemcpyDeviceToHost);
     cudaMemcpy(y, d_y, N, cudaMemcpyDeviceToHost);
-    // Τυπώνουμε το τελικό αποτέλεσμα
+
     printf("Final Result = X: %g, Y: %.4g\n", *x, *y);
-    // Απελευθέρωση της μνήμης
-    free(x);    free(y);
-    cudaFree(d_x);  cudaFree(d_y);
+
+    free(x);
+    free(y);
+    cudaFree(d_x);
+    cudaFree(d_y);
     return 0;
 }

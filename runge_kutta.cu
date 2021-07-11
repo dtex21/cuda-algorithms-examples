@@ -1,4 +1,4 @@
-// Για επιπλέον σχόλια βλέπε το cash_karp.cu
+//For comments go to cash_karp.cu
 #include <stdio.h>
 
 using namespace std;
